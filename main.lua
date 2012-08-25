@@ -26,9 +26,9 @@ local curDecay = 0;
 local starttime = nil;
 local endtime = nil;
 
-
-
-
+local gameover_state = Gamestate.new();
+local play_state = Gamestate.new()
+local mainmenu_state = Gamestate.new()
 
 
 function resetBlob(blob, minx, maxx)
@@ -54,18 +54,89 @@ function reset()
 end
 
 
+---------------------------------------------------------------------------
+---------------------------------------------------------------------------
+-- menu state
+--
+
+local mmalphaincamnt = 5;
+local mmalphadecamnt = -5;
+local mmalphainc = mmalphadecamnt;
+local mmalpharate = .01;
+local mmalphatotal = 0;
+local mmtextcolor = {0, 255, 255, 255};
+function mainmenu_state:update(dt)
+    mmalphatotal = mmalphatotal + dt;
+    if mmalphatotal > mmalpharate then
+        mmalphatotal = 0;
+
+        mmtextcolor[4] = mmtextcolor[4] + mmalphainc;
+        if mmtextcolor[4] < 50 then
+            mmalphainc = mmalphaincamnt;
+            mmtextcolor[4] = 50;
+        elseif mmtextcolor[4] > 255 then
+            mmalphainc = mmalphadecamnt;
+            mmtextcolor[4] = 255;
+        end
+
+    end
+end
+
+function mainmenu_state:draw()
+    love.graphics.setColor(mmtextcolor);
+    love.graphics.print("To be born, click your mouse!", 300, 500);
+
+    love.graphics.setColor(playerColor);
+    mousex = love.mouse.getX();
+    mousey = love.mouse.getY();
+    love.graphics.circle("fill", mousex, mousey, playerradius_start);
+end
+
+function mainmenu_state:mousereleased(x, y, button)
+    Gamestate.switch(play_state);
+end
+
 
 ---------------------------------------------------------------------------
 ---------------------------------------------------------------------------
 -- Gameover state
 --
 
-local gameover_state = Gamestate.new()
-function gameover_state:draw()
-    love.graphics.print("Shit, you died!", 350, 92);
-    love.graphics.print("But you did manage to live for " .. (endtime-starttime) .. "s!", 280, 124);
+local goalphaincamnt = 5;
+local goalphadecamnt = -5;
+local goalphainc = goalphadecamnt;
+local goalpharate = .01;
+local goalphatotal = 0;
+local gotextcolor = {0, 255, 255, 255};
+local reborntextcolor = {255, 255, 255, 255};
+function gameover_state:update(dt)
+    goalphatotal = goalphatotal + dt;
+    if goalphatotal > goalpharate then
+        goalphatotal = 0;
+
+        reborntextcolor[4] = reborntextcolor[4] + goalphainc;
+        if reborntextcolor[4] < 50 then
+            goalphainc = goalphaincamnt;
+            reborntextcolor[4] = 50;
+        elseif reborntextcolor[4] > 255 then
+            goalphainc = goalphadecamnt;
+            reborntextcolor[4] = 255;
+        end
+    end
 end
 
+function gameover_state:draw()
+    love.graphics.setColor(gotextcolor);
+    love.graphics.print("Shit, you died!", 350, 92);
+    love.graphics.print("But you did manage to live for " .. (endtime-starttime) .. "s!", 280, 124);
+
+    love.graphics.setColor(reborntextcolor);
+    love.graphics.print("Click your mouse to get reborn!", 300, 500);
+end
+
+function gameover_state:mousereleased(x, y, button)
+    Gamestate.switch(play_state);
+end
 
 
 ---------------------------------------------------------------------------
@@ -73,7 +144,6 @@ end
 -- Play state
 --
 
-local play_state = Gamestate.new()
 function play_state:init()
     for i = 1, maxblobs do
         blob = {x=nil, y=nil, r=nil, spd=nil, hit=false, isneg=nil};
@@ -156,21 +226,27 @@ function play_state:draw()
     end
 end
 
+function play_state:keyreleased(key)
+    if key == "r" then
+        Gamestate.switch(play_state);
+    end
+end
 
 
-
+---------------------------------------------------------------------------
+---------------------------------------------------------------------------
+-- LOVE functions
+--
 
 function love.load()
     love.mouse.setVisible(false);
     Gamestate.registerEvents();
-    Gamestate.switch(play_state);
+    Gamestate.switch(mainmenu_state);
 end
 
 
 function love.keyreleased(key)
     if key == "escape" then
         love.event.quit();
-    elseif key == "r" then
-        Gamestate.switch(play_state);
     end
 end
