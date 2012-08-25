@@ -1,4 +1,5 @@
 vector = require "libs.hump.vector";
+Gamestate = require "libs.hump.gamestate";
 
 local blobs = {};
 local maxblobs = 100;
@@ -27,6 +28,9 @@ local endtime = nil;
 
 
 
+
+
+
 function resetBlob(blob, minx, maxx)
     minx = minx or 830;
     maxx = maxx or 900;
@@ -51,25 +55,39 @@ end
 
 
 
+---------------------------------------------------------------------------
+---------------------------------------------------------------------------
+-- Gameover state
+--
 
-function love.load()
-    love.mouse.setVisible(false);
+local gameover_state = Gamestate.new()
+function gameover_state:draw()
+    love.graphics.print("Shit, you died!", 350, 92);
+    love.graphics.print("But you did manage to live for " .. (endtime-starttime) .. "s!", 280, 124);
+end
 
+
+
+---------------------------------------------------------------------------
+---------------------------------------------------------------------------
+-- Play state
+--
+
+local play_state = Gamestate.new()
+function play_state:init()
     for i = 1, maxblobs do
         blob = {x=nil, y=nil, r=nil, spd=nil, hit=false, isneg=nil};
-        resetBlob(blob, 630, 1430);
         table.insert(blobs, blob);
     end
 
     starttime = love.timer.getTime()
 end
 
+function play_state:enter(previous)
+    reset();
+end
 
-function love.update(dt)
-    if playerradius < 1 then
-        return;
-    end
-
+function play_state:update(dt)
     playerhit = false;
 
     local blobv;
@@ -110,18 +128,11 @@ function love.update(dt)
 
     if playerradius < 1 and endtime == nil then
         endtime = love.timer.getTime();
+        Gamestate.switch(gameover_state);
     end
 end
 
-
-function love.draw()
-    if playerradius < 1 then
-        love.graphics.print("Shit, you died!", 350, 92);
-        love.graphics.print("But you did manage to live for " .. (endtime-starttime) .. "s!", 280, 124);
-        return;
-    end
-
-
+function play_state:draw()
     mousex = love.mouse.getX();
     mousey = love.mouse.getY();
     if not playerhit then
@@ -146,10 +157,20 @@ function love.draw()
 end
 
 
+
+
+
+function love.load()
+    love.mouse.setVisible(false);
+    Gamestate.registerEvents();
+    Gamestate.switch(play_state);
+end
+
+
 function love.keyreleased(key)
     if key == "escape" then
         love.event.quit();
     elseif key == "r" then
-        reset()
+        Gamestate.switch(play_state);
     end
 end
