@@ -8,14 +8,19 @@ local blobspdmax = 90;
 local blobradiusmin = 2;
 local blobradiusmax = 30;
 
-local playerradius_start = 5
+local playerradius_start = 5;
 local playerradius = playerradius_start;
 local playerhit = false;
+local playername = "Type Your Name";
+local highscores = nil;
+local highscoresfilename = "highscores.txt";
 
 local playerColor = {255, 0, 0, 255};
 local enemyColor = {0, 255, 0, 255};
 local hitColor = {255, 0, 255};
 local negColor = {255, 255, 0};
+local hsColor = {0, 128, 255, 255};
+local hsTitleColor = {255, 128, 255, 255};
 
 local growthAmount = 1;
 local shrinkAmount = 1;
@@ -27,8 +32,8 @@ local starttime = nil;
 local endtime = nil;
 
 local gameover_state = Gamestate.new();
-local play_state = Gamestate.new()
-local mainmenu_state = Gamestate.new()
+local play_state = Gamestate.new();
+local mainmenu_state = Gamestate.new();
 
 
 function resetBlob(blob, minx, maxx)
@@ -39,7 +44,7 @@ function resetBlob(blob, minx, maxx)
     blob.y = math.random(1, 600);
     blob.r = math.random(blobradiusmin, blobradiusmax);
     blob.spd = math.random(blobspdmin, blobspdmax);
-    blob.hit = false
+    blob.hit = false;
     blob.isneg = math.random(1, 4);
 end
 
@@ -51,6 +56,72 @@ function reset()
     end
     starttime = love.timer.getTime();
     endtime = nil;
+end
+
+function loadHighScores()
+    highscores = {};
+    if not love.filesystem.exists(highscoresfilename) then
+        return;
+    end
+    local scores = love.filesystem.lines(highscoresfilename);
+    for score in scores do
+        for k, v in string.gmatch(score, "([a-zA-Z0-9]+)=([%d\.]+)") do
+            table.insert(highscores, {name=k, score=tonumber(v)});
+        end
+    end
+end
+
+function saveHighScores()
+    local scores = "";
+    local cnt = 1;
+    local start = #highscores - 10;
+    local endi = #highscores;
+    if start < 1 then
+        start = 1;
+    end
+    if endi > 10 then
+        endi = 10;
+    end
+    for i = start, endi do
+        scores = scores .. highscores[i].name .. "=" .. highscores[i].score .. "\n";
+    end
+    love.filesystem.write(highscoresfilename, scores);
+end
+
+function addHighScore(name, score)
+    if #highscores <= 0 then
+        table.insert(highscores, {name=name, score=score});
+        return;
+    end
+    for i = 1, #highscores do
+        if highscores[i].score > score then
+            table.insert(highscores, i, {name=name, score=score});
+            return;
+        end
+    end
+
+    table.insert(highscores, {name=name, score=score});
+end
+
+function drawHighScores()
+    if highscores == nil or #highscores <= 0 then
+        return;
+    end
+
+    love.graphics.setColor(hsTitleColor);
+    love.graphics.print("DEATHS", 380, 200);
+
+    love.graphics.setColor(hsColor);
+    local cnt = 1;
+    local namestr = "";
+    for i = #highscores, 1, -1 do
+        if cnt > 10 then
+            break;
+        end
+        love.graphics.print(highscores[i].name, 308, 200+(cnt*16));
+        love.graphics.print("at "..highscores[i].score.."s old", 418, 200+(cnt*16));
+        cnt = cnt + 1;
+    end
 end
 
 
@@ -65,6 +136,13 @@ local mmalphainc = mmalphadecamnt;
 local mmalpharate = .01;
 local mmalphatotal = 0;
 local mmtextcolor = {0, 255, 255, 255};
+local mmhastypedsomething = false;
+local mmshowneedname = false;
+
+function mainmenu_state:enter(previous)
+    loadHighScores();
+end
+
 function mainmenu_state:update(dt)
     mmalphatotal = mmalphatotal + dt;
     if mmalphatotal > mmalpharate then
@@ -78,22 +156,78 @@ function mainmenu_state:update(dt)
             mmalphainc = mmalphadecamnt;
             mmtextcolor[4] = 255;
         end
-
     end
 end
 
 function mainmenu_state:draw()
+    if not mmhastypedsomething then
+        love.graphics.setColor({128, 128, 128, 255});
+    else
+        love.graphics.setColor({255, 255, 255, 255});
+    end
+    love.graphics.print(playername, 415-((#playername * 16)/2), 92, 0, 2);
+
+
     love.graphics.setColor(mmtextcolor);
-    love.graphics.print("To be born, click your mouse!", 300, 500);
+    love.graphics.print("To be born, type your name then click your mouse!", 250, 500);
 
     love.graphics.setColor(playerColor);
     mousex = love.mouse.getX();
     mousey = love.mouse.getY();
     love.graphics.circle("fill", mousex, mousey, playerradius_start);
+
+
+    if mmshowneedname then
+        love.graphics.setColor({255, 0, 0, 128});
+        love.graphics.print("You need to type something for a name!", 10, 10);
+    end
+
+
+    drawHighScores();
+
+
+    love.graphics.setColor({255, 255, 128, 255});
+    --[[
+        And thus She spoke:
+        "EAT! For you shall starve without food."
+        "GROW! For the big eat the small."
+        "BEWARE! For the yellow are death."
+        "LIVE! For life is precious."
+        "KITTEN! For cuteness."
+           -- excerpt from the book of prophecy
+    ]]
 end
 
 function mainmenu_state:mousereleased(x, y, button)
-    Gamestate.switch(play_state);
+    if not mmhastypedsomething then
+        mmshowneedname = true;
+    else
+        Gamestate.switch(play_state);
+    end
+end
+
+function mainmenu_state:keyreleased(key)
+    if key == "backspace" or key == "delete" then
+        if not mmhastypedsomething then
+            playername = "";
+        elseif #playername <= 0 then
+            playername = "";
+        else
+            playername = playername:sub(1, (#playername-1));
+        end
+    end
+
+    if love.keyboard.isDown("lshift") or love.keyboard.isDown("rshift") or love.keyboard.isDown("capslock") then
+        key = key:upper();
+    end
+    if #key == 1 and string.find(key, '[a-zA-Z0-9]') then
+        if not mmhastypedsomething then
+            playername = key;
+            mmhastypedsomething = true;
+        elseif #playername <= 10 then
+            playername = playername .. key;
+        end
+    end
 end
 
 
@@ -109,6 +243,13 @@ local goalpharate = .01;
 local goalphatotal = 0;
 local gotextcolor = {0, 255, 255, 255};
 local reborntextcolor = {255, 255, 255, 255};
+
+function gameover_state:enter(previous)
+    loadHighScores();
+    addHighScore(playername, (endtime-starttime));
+    saveHighScores();
+end
+
 function gameover_state:update(dt)
     goalphatotal = goalphatotal + dt;
     if goalphatotal > goalpharate then
@@ -127,11 +268,13 @@ end
 
 function gameover_state:draw()
     love.graphics.setColor(gotextcolor);
-    love.graphics.print("Shit, you died!", 350, 92);
-    love.graphics.print("But you did manage to live for " .. (endtime-starttime) .. "s!", 280, 124);
+    love.graphics.print("Shit, you died!", 360, 92);
+    love.graphics.print("But you did manage to live for " .. (endtime-starttime) .. "s!", 290, 124);
 
     love.graphics.setColor(reborntextcolor);
-    love.graphics.print("Click your mouse to get reborn!", 300, 500);
+    love.graphics.print("Click your mouse to get reborn!", 310, 500);
+
+    drawHighScores();
 end
 
 function gameover_state:mousereleased(x, y, button)
