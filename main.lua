@@ -116,6 +116,43 @@ function drawHighScores()
     end
 end
 
+function loadMusic(filename)
+    song = love.audio.newSource(filename, "stream");
+    song:setLooping(true);
+    love.audio.play(song);
+    return song;
+end
+
+function playMusic(song)
+    if song ~= nil and (song:isPaused() or song:isStopped()) then
+        love.audio.play(song);
+    end
+end
+
+function stopMusic(song)
+    if song ~= nil and not song:isPaused() and not song:isStopped() then
+        love.audio.stop(song);
+    end
+end
+
+function loadSound(filename)
+    sound = love.audio.newSource(filename, "static");
+    song:setLooping(false);
+    return sound;
+end
+
+function playSound(sound)
+    if sound ~= nil and (sound:isPaused() or sound:isStopped()) then
+        love.audio.play(sound);
+    end
+end
+
+function stopSound(sound)
+    if sound ~= nil and not sound:isPaused() and not sound:isStopped() then
+        love.audio.stop(sound);
+    end
+end
+
 
 ---------------------------------------------------------------------------
 ---------------------------------------------------------------------------
@@ -130,9 +167,20 @@ local mmalphatotal = 0;
 local mmtextcolor = {0, 255, 255, 255};
 local mmhastypedsomething = false;
 local mmshowneedname = false;
+local mmmusicfilename = "assets/music/bu-the-poor-puppies.ogg";
+local mmmusic = nil;
 
 function mainmenu_state:enter(previous)
     loadHighScores();
+    playMusic(mmmusic);
+end
+
+function mainmenu_state:leave()
+    stopMusic(mmmusic);
+end
+
+function mainmenu_state:init()
+    mmmusic = loadMusic(mmmusicfilename);
 end
 
 function mainmenu_state:update(dt)
@@ -163,10 +211,10 @@ function mainmenu_state:draw()
     love.graphics.setColor(mmtextcolor);
     love.graphics.print("To be born, type your name then click your mouse!", 250, 500);
 
-    love.graphics.setColor(playerColor);
-    mousex = love.mouse.getX();
-    mousey = love.mouse.getY();
-    love.graphics.circle("fill", mousex, mousey, playerradius_start);
+    --love.graphics.setColor(playerColor);
+    --mousex = love.mouse.getX();
+    --mousey = love.mouse.getY();
+    --love.graphics.circle("fill", mousex, mousey, playerradius_start);
 
 
     if mmshowneedname then
@@ -236,11 +284,22 @@ local goalpharate = .01;
 local goalphatotal = 0;
 local gotextcolor = {0, 255, 255, 255};
 local reborntextcolor = {255, 255, 255, 255};
+local gomusicfilename = "assets/music/bu-feet-and-bears.ogg";
+local gomusic = nil;
 
 function gameover_state:enter(previous)
     loadHighScores();
     addHighScore(playername, (endtime-starttime));
     saveHighScores();
+    playMusic(gomusic);
+end
+
+function gameover_state:leave()
+    stopMusic(gomusic);
+end
+
+function gameover_state:init()
+    gomusic = loadMusic(gomusicfilename);
 end
 
 function gameover_state:update(dt)
@@ -280,17 +339,35 @@ end
 -- Play state
 --
 
+local kittenimg = nil;
+local pmusicfilename = "assets/music/bu-the-tense-foot.ogg";
+local pmusic = nil;
+local psuck2filename = "assets/sound/sucking2.ogg";
+local psuck2ref = nil;
+
+function play_state:enter(previous)
+    reset();
+    playMusic(pmusic);
+end
+
+function play_state:leave()
+    stopMusic(pmusic);
+end
+
 function play_state:init()
     for i = 1, maxblobs do
         blob = {x=nil, y=nil, r=nil, spd=nil, hit=false, isneg=nil};
         table.insert(blobs, blob);
     end
 
-    starttime = love.timer.getTime()
-end
+    starttime = love.timer.getTime();
 
-function play_state:enter(previous)
-    reset();
+    if playername == "KITTEN" then
+        kittenimg = love.graphics.newImage("assets/textures/kitty.png");
+    end
+
+    pmusic = loadMusic(pmusicfilename);
+    psuck2 = loadSound(psuck2filename);
 end
 
 function play_state:update(dt)
@@ -323,6 +400,7 @@ function play_state:update(dt)
                 blobs[i].r = blobs[i].r - shrinkAmount;
                 playerradius = playerradius + growthAmount;
             end
+            playSound(psuck2);
         end
     end
 
@@ -339,6 +417,12 @@ function play_state:update(dt)
 end
 
 function play_state:draw()
+    if kittenimg ~= nil then
+        love.graphics.setColorMode("replace");
+        love.graphics.draw(kittenimg, 1, 580);
+        love.graphics.setColorMode("modulate");
+    end
+
     mousex = love.mouse.getX();
     mousey = love.mouse.getY();
     if not playerhit then
