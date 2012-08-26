@@ -72,7 +72,7 @@ function loadHighScores()
     end
     local scores = love.filesystem.lines(highscoresfilename);
     for score in scores do
-        for k, v in string.gmatch(score, "([a-zA-Z0-9]+)=([%d\.]+)") do
+        for k, v in string.gmatch(score, "([a-zA-Z0-9 ]+)=([%d\.]+)") do
             table.insert(highscores, {name=k, score=tonumber(v)});
         end
     end
@@ -299,7 +299,11 @@ function mainmenu_state:draw()
     drawHighScores(-200);
 
     -- draw the instructions
-    drawInstructions();
+    if highscores == nil or #highscores <= 0 then
+        drawInstructions((-43*fontwidth*.5)/2);
+    else
+        drawInstructions();
+    end
 end
 
 function mainmenu_state:mousereleased(x, y, button)
@@ -324,7 +328,7 @@ function mainmenu_state:keyreleased(key)
     if love.keyboard.isDown("lshift") or love.keyboard.isDown("rshift") or love.keyboard.isDown("capslock") then
         key = key:upper();
     end
-    if #key == 1 and string.find(key, '[a-zA-Z0-9]') then
+    if #key == 1 and string.find(key, '[a-zA-Z0-9 ]') then
         if not mmhastypedsomething then
             playername = key;
             mmhastypedsomething = true;
@@ -418,6 +422,8 @@ local pmusicfilename = "assets/music/bu-the-tense-foot.ogg";
 local pmusic = nil;
 local psuck2filename = "assets/sound/sucking2.ogg";
 local psuck2ref = nil;
+local pdeathfilename = "assets/sound/death.ogg";
+local pdeathref = nil;
 
 function play_state:enter(previous)
     reset();
@@ -442,6 +448,7 @@ function play_state:init()
 
     pmusic = loadMusic(pmusicfilename);
     psuck2 = loadSound(psuck2filename);
+    pdeath = loadSound(pdeathfilename);
 end
 
 function play_state:update(dt)
@@ -485,6 +492,7 @@ function play_state:update(dt)
     end
 
     if playerradius < 1 and endtime == nil then
+        playSound(pdeath);
         endtime = love.timer.getTime();
         Gamestate.switch(gameover_state);
     end
