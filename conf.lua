@@ -1,8 +1,8 @@
 function love.conf(t)
-    t.title = "FLOW"
+    t.title = "And Thus She Spake"
     t.author = "Joel Kleier"
     t.url = "http://ludumdare.com/"
-    t.identity = "flow"
+    t.identity = "andthusshespake"
     t.version = "0.8.0"
     t.console = false
     t.release = false
