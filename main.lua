@@ -1,6 +1,8 @@
 vector = require "libs.hump.vector";
 Gamestate = require "libs.hump.gamestate";
 
+local nosound = false;
+
 local blobs = {};
 local maxblobs = 100;
 local blobspdmin = 40;
@@ -16,6 +18,7 @@ local highscores = nil;
 local highscoresfilename = "highscores.txt";
 
 local playerColor = {255, 0, 0, 255};
+local playerMutedColor = {100, 100, 100, 255};
 local enemyColor = {0, 255, 0, 255};
 local hitColor = {255, 0, 255};
 local negColor = {255, 255, 0};
@@ -34,6 +37,10 @@ local endtime = nil;
 local gameover_state = Gamestate.new();
 local play_state = Gamestate.new();
 local mainmenu_state = Gamestate.new();
+
+local font = nil;
+local fontwidth = 16;
+local fontheight = 28;
 
 
 function resetBlob(blob, minx, maxx)
@@ -95,28 +102,70 @@ function addHighScore(name, score)
     table.insert(highscores, {name=name, score=score});
 end
 
-function drawHighScores()
+function centerX(text, scale)
+    return 400 - ((#text * fontwidth * scale) / 2);
+end
+
+function drawHighScores(hoffset)
+    hoffset = hoffset or 0;
+
     if highscores == nil or #highscores <= 0 then
         return;
     end
 
     love.graphics.setColor(hsTitleColor);
-    love.graphics.print("DEATHS", 380, 200);
+    local text = "DEATHS";
+    love.graphics.print(text, centerX(text, .5) + hoffset, 160, 0, .5);
 
     love.graphics.setColor(hsColor);
     local cnt = 1;
     local namestr = "";
+    local vpos = nil;
     for i = #highscores, 1, -1 do
         if cnt > 10 then
             break;
         end
-        love.graphics.print(highscores[i].name, 308, 200+(cnt*16));
-        love.graphics.print("at "..highscores[i].score.."s old", 418, 200+(cnt*16));
+        vpos = 160+(cnt*24)
+        namestr = "at "..string.format("%3.3f", highscores[i].score).."s old";
+        love.graphics.print(highscores[i].name, (400 - ((#highscores[i].name+1)*fontwidth*.5)) + hoffset, vpos, 0, .5);
+        love.graphics.print(namestr, 400 + hoffset, vpos, 0, .5);
         cnt = cnt + 1;
     end
 end
 
+function drawInstructions(hoffset)
+    hoffset = hoffset or 0;
+
+    --[[
+        And thus She spake:
+        "EAT! For you shall starve without food."
+        "GROW! For the big eat the small."
+        "BEWARE! For the golden children are death."
+        "LIVE! For life is precious."
+        "KITTEN! For cuteness."
+           -- excerpt from the book of prophecy
+    ]]
+    local leftalign = 400 + hoffset;
+    local spacing = fontheight;
+    local vstart = 210;
+    local scale = .5;
+    love.graphics.setColor({128, 190, 128, 255});
+    love.graphics.print("And thus She spake:", leftalign, vstart, 0, scale);
+    love.graphics.setColor({255, 255, 128, 255});
+    love.graphics.print("\"EAT! For you shall starve without food.\"", leftalign, vstart+(spacing*1), 0, scale);
+    love.graphics.print("\"GROW! For the big eat the small.\"", leftalign, vstart+(spacing*2), 0, scale);
+    love.graphics.print("\"BEWARE! For the golden children are death.\"", leftalign, vstart+(spacing*3), 0, scale);
+    love.graphics.print("\"LIVE! For life is precious.\"", leftalign, vstart+(spacing*4), 0, scale);
+    love.graphics.print("\"KITTEN! For cuteness.\"", leftalign, vstart+(spacing*5), 0, scale);
+    love.graphics.setColor({128, 190, 128, 255});
+    love.graphics.print("  -- excerpt from the book of prophecy", leftalign, vstart+(spacing*6), 0, scale);
+end
+
 function loadMusic(filename)
+    if nosound then
+        return;
+    end;
+
     song = love.audio.newSource(filename, "stream");
     song:setLooping(true);
     love.audio.play(song);
@@ -124,30 +173,50 @@ function loadMusic(filename)
 end
 
 function playMusic(song)
+    if nosound then
+        return;
+    end;
+
     if song ~= nil and (song:isPaused() or song:isStopped()) then
         love.audio.play(song);
     end
 end
 
 function stopMusic(song)
+    if nosound then
+        return;
+    end;
+
     if song ~= nil and not song:isPaused() and not song:isStopped() then
         love.audio.stop(song);
     end
 end
 
 function loadSound(filename)
+    if nosound then
+        return;
+    end;
+
     sound = love.audio.newSource(filename, "static");
     song:setLooping(false);
     return sound;
 end
 
 function playSound(sound)
+    if nosound then
+        return;
+    end;
+
     if sound ~= nil and (sound:isPaused() or sound:isStopped()) then
         love.audio.play(sound);
     end
 end
 
 function stopSound(sound)
+    if nosound then
+        return;
+    end;
+
     if sound ~= nil and not sound:isPaused() and not sound:isStopped() then
         love.audio.stop(sound);
     end
@@ -200,43 +269,37 @@ function mainmenu_state:update(dt)
 end
 
 function mainmenu_state:draw()
+    -- draw a 'muted' player blob
+    love.graphics.setColor(playerMutedColor);
+    mousex = love.mouse.getX();
+    mousey = love.mouse.getY();
+    love.graphics.circle("fill", mousex, mousey, playerradius_start);
+
+    -- draw the players name, or ask them to enter a name
     if not mmhastypedsomething then
         love.graphics.setColor({128, 128, 128, 255});
     else
         love.graphics.setColor({255, 255, 255, 255});
     end
-    love.graphics.print(playername, 415-((#playername * 16)/2), 92, 0, 2);
+    love.graphics.print(playername, centerX(playername, 2), 22, 0, 2);
 
-
+    -- tell the player how to start the game
     love.graphics.setColor(mmtextcolor);
-    love.graphics.print("To be born, type your name then click your mouse!", 250, 500);
+    local text = "To be born, type your name then click your mouse!";
+    love.graphics.print(text, centerX(text, .5), 550, 0, .5);
 
-    --love.graphics.setColor(playerColor);
-    --mousex = love.mouse.getX();
-    --mousey = love.mouse.getY();
-    --love.graphics.circle("fill", mousex, mousey, playerradius_start);
-
-
+    -- error message -> a name needs to be entered
     if mmshowneedname then
         love.graphics.setColor({255, 0, 0, 128});
-        love.graphics.print("You need to type something for a name!", 10, 10);
+        text = "You need to type something for a name!";
+        love.graphics.print(text, centerX(text, 1), 100);
     end
 
+    -- draw the highscores table
+    drawHighScores(-200);
 
-    drawHighScores();
-
-
-    love.graphics.setColor({255, 255, 128, 255});
-    --[[
-        And thus She spoke:
-        "EAT! For you shall starve without food."
-        "GROW! For the big eat the small."
-        "BEWARE! For the golden children are death."
-        "LIVE! For life is precious."
-        "KITTEN! For cuteness."
-           -- excerpt from the book of prophecy
-    ]]
-
+    -- draw the instructions
+    drawInstructions();
 end
 
 function mainmenu_state:mousereleased(x, y, button)
@@ -319,6 +382,11 @@ function gameover_state:update(dt)
 end
 
 function gameover_state:draw()
+    love.graphics.setColor(playerMutedColor);
+    mousex = love.mouse.getX();
+    mousey = love.mouse.getY();
+    love.graphics.circle("fill", mousex, mousey, playerradius_start);
+
     love.graphics.setColor(gotextcolor);
     love.graphics.print("Shit, you died!", 360, 92);
     love.graphics.print("But you did manage to live for " .. (endtime-starttime) .. "s!", 285, 124);
@@ -326,7 +394,7 @@ function gameover_state:draw()
     love.graphics.setColor(reborntextcolor);
     love.graphics.print("Click your mouse to get reborn!", 305, 500);
 
-    drawHighScores();
+    drawHighScores(-200);
 end
 
 function gameover_state:mousereleased(x, y, button)
@@ -459,7 +527,17 @@ end
 --
 
 function love.load()
+    for i = 1, #arg do
+        if arg[i]:lower() == "nosound" then
+            nosound = true;
+        end
+    end
+
     love.mouse.setVisible(false);
+
+    font = love.graphics.newImageFont("assets/fonts/herkld-28.png", "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789.!:;,/\\%?'\"[] +-");
+    love.graphics.setFont(font);
+
     Gamestate.registerEvents();
     Gamestate.switch(mainmenu_state);
 end
