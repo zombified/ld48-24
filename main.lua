@@ -126,7 +126,7 @@ function drawHighScores(hoffset)
             break;
         end
         vpos = 160+(cnt*24)
-        namestr = "at "..string.format("%3.3f", highscores[i].score).."s old";
+        namestr = "at "..string.format("%.3f", highscores[i].score).."s old";
         love.graphics.print(highscores[i].name, (400 - ((#highscores[i].name+1)*fontwidth*.5)) + hoffset, vpos, 0, .5);
         love.graphics.print(namestr, 400 + hoffset, vpos, 0, .5);
         cnt = cnt + 1;
@@ -382,19 +382,25 @@ function gameover_state:update(dt)
 end
 
 function gameover_state:draw()
+    local text = "";
+
     love.graphics.setColor(playerMutedColor);
     mousex = love.mouse.getX();
     mousey = love.mouse.getY();
     love.graphics.circle("fill", mousex, mousey, playerradius_start);
 
     love.graphics.setColor(gotextcolor);
-    love.graphics.print("Shit, you died!", 360, 92);
-    love.graphics.print("But you did manage to live for " .. (endtime-starttime) .. "s!", 285, 124);
+    text = "Shit, you died!";
+    love.graphics.print(text, centerX(text, 1), 22);
+    text = "But you did manage to live for " .. string.format("%.3f", (endtime-starttime)) .. "s!";
+    love.graphics.print(text, centerX(text, 1), 54);
 
     love.graphics.setColor(reborntextcolor);
-    love.graphics.print("Click your mouse to get reborn!", 305, 500);
+    text = "Click your mouse to get reborn!";
+    love.graphics.print(text, centerX(text, .5), 550, 0, .5);
 
     drawHighScores(-200);
+    drawInstructions();
 end
 
 function gameover_state:mousereleased(x, y, button)
