@@ -74,15 +74,7 @@ end
 function saveHighScores()
     local scores = "";
     local cnt = 1;
-    local start = #highscores - 10;
-    local endi = #highscores;
-    if start < 1 then
-        start = 1;
-    end
-    if endi > 10 then
-        endi = 10;
-    end
-    for i = start, endi do
+    for i = 1, #highscores do
         scores = scores .. highscores[i].name .. "=" .. highscores[i].score .. "\n";
     end
     love.filesystem.write(highscoresfilename, scores);
@@ -94,7 +86,7 @@ function addHighScore(name, score)
         return;
     end
     for i = 1, #highscores do
-        if highscores[i].score > score then
+        if score < highscores[i].score then
             table.insert(highscores, i, {name=name, score=score});
             return;
         end
@@ -191,11 +183,12 @@ function mainmenu_state:draw()
         And thus She spoke:
         "EAT! For you shall starve without food."
         "GROW! For the big eat the small."
-        "BEWARE! For the yellow are death."
+        "BEWARE! For the golden children are death."
         "LIVE! For life is precious."
         "KITTEN! For cuteness."
            -- excerpt from the book of prophecy
     ]]
+
 end
 
 function mainmenu_state:mousereleased(x, y, button)
@@ -269,10 +262,10 @@ end
 function gameover_state:draw()
     love.graphics.setColor(gotextcolor);
     love.graphics.print("Shit, you died!", 360, 92);
-    love.graphics.print("But you did manage to live for " .. (endtime-starttime) .. "s!", 290, 124);
+    love.graphics.print("But you did manage to live for " .. (endtime-starttime) .. "s!", 285, 124);
 
     love.graphics.setColor(reborntextcolor);
-    love.graphics.print("Click your mouse to get reborn!", 310, 500);
+    love.graphics.print("Click your mouse to get reborn!", 305, 500);
 
     drawHighScores();
 end
